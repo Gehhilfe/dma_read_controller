@@ -35,12 +35,18 @@ module fifo #(
     input wire rd_en,
     
     output wire full,
-    output wire empty
+    output wire empty,
+
+    output wire [BITS_WIDTH-1:0] elements,
+    output wire half_full
     );
 
 reg [BITS_DEPTH:0] read_ptr, write_ptr;
 
 reg [BITS_WIDTH-1:0] mem [0:2**BITS_DEPTH];
+
+assign elements = write_ptr[BITS_DEPTH-1:0] - read_ptr[BITS_DEPTH-1:0];
+assign half_full = elements[BITS_DEPTH-1];
 
 assign empty = read_ptr == write_ptr;
 assign full = read_ptr[BITS_DEPTH] != write_ptr[BITS_DEPTH] && read_ptr[BITS_DEPTH-1:0] == write_ptr[BITS_DEPTH-1:0];

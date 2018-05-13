@@ -62,7 +62,7 @@ transmission_spliter splitter(
 localparam
     lp_state_bits = 32,
     lp_state_idle = 0,
-    lp_state_wait_data = 1;
+    lp_state_request_done = 1;
 
 reg [lp_state_bits-1:0] state, state_next;
 
@@ -77,12 +77,100 @@ reg [7:0]   dma_request_a_burst_ctr;
 reg dma_request_a_add_burst;
 
 
+
 wire [127:0] path_a_data_dout;
 wire [3:0] path_a_data_dout_dwen;
-wire [31:0] path_a_burst_addr;
+wire [31:0] path_a_burst_addr, path_a_elements;
 wire [7:0] path_a_burst_ctr;
 wire path_a_data_empty, path_a_burst_empty;
 wire path_a_data_full, path_a_burst_full;
+wire path_a_data_half_full, path_a_burst_half_full;
+
+
+fifo #(
+    .BITS_DEPTH($clog2(64)),
+    .BITS_WIDTH(132)
+) path_a_data_fifo(
+    .i_clk(i_clk),
+    .i_rst(i_rst),
+    .din({packer_dout_dwen, packer_dout}),
+    .wr_en(packer_valid && dma_request_a_tag == packer_tag),
+    .rd_en(0),
+    .dout({path_a_data_dout_dwen, path_a_data_dout}),
+    .full(path_a_data_full),
+    .empty(path_a_data_empty),
+    .half_full(path_a_data_half_full),
+    .elements (path_a_elements)
+);
+
+fifo #(
+   .BITS_DEPTH($clog2(64)),
+   .BITS_WIDTH(7+32)
+) path_a_burst_fifo(
+    .i_clk(i_clk),
+    .i_rst(i_rst),
+    .din({dma_request_a_device_addr, dma_request_a_burst_ctr}),
+    .wr_en(dma_request_a_add_burst),
+    .rd_en(0),
+    .dout({path_a_burst_addr, path_a_burst_ctr}),
+    .full(path_a_burst_full),
+    .empty(path_a_burst_empty),
+    .half_full(path_a_burst_half_full)
+);
+
+
+
+
+reg         set_path_b;
+reg         dma_request_b_hot;
+reg [7:0]   dma_request_b_tag;
+reg [31:0]  dma_request_b_device_addr, dma_request_b_device_addr_next_burst_start;
+reg [31:0]  dma_request_b_size;
+reg [7:0]   dma_request_b_burst_ctr;
+reg dma_request_b_add_burst;
+
+
+wire [127:0] path_b_data_dout;
+wire [3:0] path_b_data_dout_dwen;
+wire [31:0] path_b_burst_addr, path_b_elements;
+wire [7:0] path_b_burst_ctr;
+wire path_b_data_empty, path_b_burst_empty;
+wire path_b_data_full, path_b_burst_full;
+wire path_b_data_half_full, path_b_burst_half_full;
+
+
+fifo #(
+    .BITS_DEPTH($clog2(64)),
+    .BITS_WIDTH(132)
+) path_b_data_fifo(
+    .i_clk(i_clk),
+    .i_rst(i_rst),
+    .din({packer_dout_dwen, packer_dout}),
+    .wr_en(packer_valid && dma_request_b_tag == packer_tag),
+    .rd_en(0),
+    .dout({path_b_data_dout_dwen, path_b_data_dout}),
+    .full(path_b_data_full),
+    .empty(path_b_data_empty),
+    .half_full(path_b_data_half_full),
+    .elements (path_b_elements)
+);
+
+fifo #(
+   .BITS_DEPTH($clog2(64)),
+   .BITS_WIDTH(7+32)
+) path_b_burst_fifo(
+    .i_clk(i_clk),
+    .i_rst(i_rst),
+    .din({dma_request_b_device_addr, dma_request_b_burst_ctr}),
+    .wr_en(dma_request_b_add_burst),
+    .rd_en(0),
+    .dout({path_b_burst_addr, path_b_burst_ctr}),
+    .full(path_b_burst_full),
+    .empty(path_b_burst_empty),
+    .half_full(path_b_burst_half_full)
+);
+
+
 
 always @(*) begin
     dma_request_a_add_burst = 0;
@@ -96,64 +184,49 @@ end
 // synthesis translate_off
 always @(posedge i_clk) begin
     if (packer_valid && dma_request_a_tag == packer_tag) begin
-        $display("Add data to path a ctr = %d", dma_request_a_burst_ctr);
+        $display("Add data to path A ctr = %d", dma_request_a_burst_ctr);
     end
     if (dma_request_a_add_burst) begin
-        $display("Add burst with length = %d", dma_request_a_burst_ctr);
+        $display("Add burst with length = %d to path A", dma_request_a_burst_ctr);
+    end
+end
+
+always @(posedge i_clk) begin
+    if (packer_valid && dma_request_b_tag == packer_tag) begin
+        $display("Add data to path B ctr = %d", dma_request_b_burst_ctr);
+    end
+    if (dma_request_b_add_burst) begin
+        $display("Add burst with length = %d to path B", dma_request_b_burst_ctr);
     end
 end
 // synthesis translate_on
 
-
-fifo #(
-    .BITS_DEPTH($clog2(128)),
-    .BITS_WIDTH(132)
-) path_a_data_fifo(
-    .i_clk(i_clk),
-    .i_rst(i_rst),
-    .din({packer_dout_dwen, packer_dout}),
-    .wr_en(packer_valid && dma_request_a_tag == packer_tag),
-    .rd_en(0),
-    .dout({path_a_data_dout_dwen, path_a_data_dout}),
-    .full(path_a_data_full),
-    .empty(path_a_data_empty)
-);
-
-fifo #(
-   .BITS_DEPTH($clog2(128)),
-   .BITS_WIDTH(7+32)
-) path_a_burst_fifo(
-    .i_clk(i_clk),
-    .i_rst(i_rst),
-    .din({dma_request_a_device_addr, dma_request_a_burst_ctr}),
-    .wr_en(dma_request_a_add_burst),
-    .rd_en(0),
-    .dout({path_a_burst_addr, path_a_burst_ctr}),
-    .full(path_a_burst_full),
-    .empty(path_a_burst_empty)
-);
-
 always @(*) begin
     state_next = state;
     set_path_a = 0;
+    set_path_b = 0;
     dma_read_valid_next = 0;
 
     case (state)
         lp_state_idle: begin
-            if(splitter_dma_pending && dma_request_a_size == 0) begin
+            if(splitter_dma_pending && !path_a_burst_half_full && !path_a_data_half_full && !dma_request_a_hot) begin
                 dma_read_valid_next = 1;
                 set_path_a = 1;
+                state_next = lp_state_request_done;
+            end 
+            else if (splitter_dma_pending && !path_b_burst_half_full && !path_b_data_half_full && !dma_request_b_hot) begin
+                dma_read_valid_next = 1;
+                set_path_b = 1;
+                state_next = lp_state_request_done;
             end
-            if(splitter_dma_pending && dma_read_done) begin
-                state_next = lp_state_wait_data;
-                dma_read_valid_next = 0;
-            end
-        end // lp_state_idle:
-
-        lp_state_wait_data: begin
-            if(!dma_request_a_hot) state_next = lp_state_idle;
         end
 
+        lp_state_request_done: begin
+            if(dma_read_done) begin
+                dma_read_valid_next = 0;
+                state_next = lp_state_idle;
+            end
+        end
     endcase
 end
 
@@ -161,8 +234,13 @@ always @(posedge i_clk) begin
     if (i_rst) begin
         state <= lp_state_idle;
         dma_read_valid <= 0;
+        
         dma_request_a_size <= 0;
         dma_request_a_hot <= 0;
+        
+        dma_request_b_size <= 0;
+        dma_request_b_hot <= 0;
+        
         splitter_dma_done <= 0;
     end // if (i_rst)
     else begin
@@ -186,6 +264,24 @@ always @(posedge i_clk) begin
               if(dma_request_a_add_burst)
                 dma_request_a_device_addr <= dma_request_a_device_addr_next_burst_start;
         end
+
+        if (set_path_b) begin
+            dma_request_b_tag <= current_tag;
+            dma_request_b_device_addr <= splitter_dma_address_device;
+            dma_request_b_device_addr_next_burst_start <= splitter_dma_address_device;
+            dma_request_b_size <= splitter_dma_size;
+            dma_request_b_burst_ctr <= 0;
+            dma_request_b_hot <= 1;
+            splitter_dma_done <= 1;
+        end // if (set_path_a)
+        else begin
+            if(dma_request_b_size == 0)
+                dma_request_b_hot <= 0;
+              if(dma_request_b_add_burst)
+                dma_request_b_device_addr <= dma_request_b_device_addr_next_burst_start;
+        end
+
+
         // Path A
         if(packer_valid) begin
             if (packer_tag == dma_request_a_tag) begin
@@ -205,6 +301,25 @@ always @(posedge i_clk) begin
 
                 if (packer_dout_dwen[3] == 0) dma_request_a_burst_ctr <= 0;
                 else dma_request_a_burst_ctr <= dma_request_a_burst_ctr + 1'b1;
+            end
+
+            if (packer_tag == dma_request_b_tag) begin
+                casex (packer_dout_dwen)
+                    4'b0001: dma_request_b_size <= dma_request_b_size - 4;
+                    4'b001x: dma_request_b_size <= dma_request_b_size - 8;
+                    4'b01xx: dma_request_b_size <= dma_request_b_size - 12;
+                    4'b1xxx: dma_request_b_size <= dma_request_b_size - 16;
+                endcase // packer_dout_dwen
+
+                casex (packer_dout_dwen)
+                    4'b0001: dma_request_b_device_addr_next_burst_start <= dma_request_b_device_addr_next_burst_start + 4;
+                    4'b001x: dma_request_b_device_addr_next_burst_start <= dma_request_b_device_addr_next_burst_start + 8;
+                    4'b01xx: dma_request_b_device_addr_next_burst_start <= dma_request_b_device_addr_next_burst_start + 12;
+                    4'b1xxx: dma_request_b_device_addr_next_burst_start <= dma_request_b_device_addr_next_burst_start + 16;
+                endcase // packer_dout_dwen
+
+                if (packer_dout_dwen[3] == 0) dma_request_b_burst_ctr <= 0;
+                else dma_request_b_burst_ctr <= dma_request_b_burst_ctr + 1'b1;
             end
         end
     end // else

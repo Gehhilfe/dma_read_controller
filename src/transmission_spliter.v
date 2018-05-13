@@ -44,22 +44,22 @@ assign dma_dir_write = r_conf_dir_write;
 always @(*) begin   
     if(conf_valid) begin
         if(conf_dir_write)
-            r_is_full = conf_size > max_payload_size_bytes;
+            r_is_full = conf_size >= max_payload_size_bytes;
         else
-            r_is_full = conf_size > max_read_req_bytes;
+            r_is_full = conf_size >= max_read_req_bytes;
     end else begin
         if(r_conf_dir_write)
-                r_is_full = r_conf_size > max_payload_size_bytes;
+                r_is_full = r_conf_size >= max_payload_size_bytes;
             else
-                r_is_full = r_conf_size > max_read_req_bytes;
+                r_is_full = r_conf_size >= max_read_req_bytes;
     end
 end
 
 always @(*) begin   
     if(r_conf_dir_write)
-            r_is_full_next = r_conf_size > max_payload_size_bytes<<1;
+            r_is_full_next = r_conf_size >= max_payload_size_bytes<<1;
         else
-            r_is_full_next = r_conf_size > max_read_req_bytes<<1;
+            r_is_full_next = r_conf_size >= max_read_req_bytes<<1;
 end
 
 always @(*) begin
@@ -85,6 +85,7 @@ always @(*) begin
     dma_pending_next = 0;
     done_op = 0;
     conf_transaction_done_next = 0;
+
     case(state)
         lp_state_idle: begin
             if (conf_valid) begin
@@ -186,7 +187,11 @@ always @(posedge i_clk) begin
         max_payload_size <= pcie_dcommand[7:5];
         max_read_req_size <= pcie_dcommand[14:12];
         state <= state_next;
-        dma_pending <= dma_pending_next;
+        if (r_conf_size[31])
+            dma_pending <= 0;
+        else
+            dma_pending <= dma_pending_next;
+
         conf_transaction_done <= conf_transaction_done_next;
         
         if(conf_valid) begin
