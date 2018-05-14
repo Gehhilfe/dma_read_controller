@@ -5,7 +5,7 @@ module transmission_spliter(
     input wire i_rst,
     input wire [31:0] conf_start_address_host,
     input wire [31:0] conf_start_address_device,
-    input wire [31:0] conf_size,
+    input wire [9:0] conf_size,
     input wire conf_valid,
     input wire conf_dir_write,
     input wire [15:0] pcie_dcommand,
@@ -16,7 +16,7 @@ module transmission_spliter(
     
     output wire [31:0] dma_address_host,
     output wire [31:0] dma_address_device,
-    output reg [31:0] dma_size,
+    output reg [9:0] dma_size,
     output wire dma_dir_write
     
     );

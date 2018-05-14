@@ -6,7 +6,7 @@ module dma_read_controller(
 
     input wire [31:0]       dma_read_host_address,
     input wire [31:0]       dma_read_device_address,
-    input wire [31:0]       dma_read_length,
+    input wire [9:0]        dma_read_length,
     input wire              dma_read_start,
 
     // Packer
