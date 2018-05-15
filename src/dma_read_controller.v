@@ -6,7 +6,7 @@ module dma_read_controller(
 
     input wire [31:0]       dma_read_host_address,
     input wire [31:0]       dma_read_device_address,
-    input wire [9:0]        dma_read_length,
+    input wire [31:0]       dma_read_length,
     input wire              dma_read_start,
 
     // Packer
@@ -21,9 +21,28 @@ module dma_read_controller(
     output wire [9:0]       dma_read_len,
     output reg              dma_read_valid,
     input wire              dma_read_done,
-    input wire [7:0]        current_tag
-);
+    input wire [7:0]        current_tag,
 
+
+    output wire  [31:0]     awaddr,
+    output wire  [7:0]      awlen,
+    output wire [2:0]       awsize,
+    output wire [1:0]       awburst,
+    output wire [3:0]       awcache,
+    output wire [2:0]       awproto,
+    output wire             awvalid,
+    input wire              awready,
+
+    output wire [127:0]     wdata,
+    output wire [15:0]      wstrb,
+    output wire             wlast,
+    output wire             wvalid,
+    input wire              wready,
+
+    input wire [1:0]        bresp,
+    input wire              bvalid,
+    output wire             bready
+);
 
 reg splitter_dma_done;
 wire splitter_dma_pending;
@@ -34,7 +53,7 @@ wire [31:0] req_size;
 
 wire [31:0]  splitter_dma_address_host;
 wire [31:0]  splitter_dma_address_device;
-wire [31:0]  splitter_dma_size;
+wire [9:0]  splitter_dma_size;
 
 assign dma_read_addr = splitter_dma_address_host;
 assign dma_read_len = splitter_dma_size;
@@ -72,7 +91,7 @@ reg         set_path_a;
 reg         dma_request_a_hot;
 reg [7:0]   dma_request_a_tag;
 reg [31:0]  dma_request_a_device_addr, dma_request_a_device_addr_next_burst_start;
-reg [31:0]  dma_request_a_size;
+reg [9:0]  dma_request_a_size;
 reg [7:0]   dma_request_a_burst_ctr;
 reg dma_request_a_add_burst;
 
@@ -85,7 +104,7 @@ wire [7:0] path_a_burst_ctr;
 wire path_a_data_empty, path_a_burst_empty;
 wire path_a_data_full, path_a_burst_full;
 wire path_a_data_half_full, path_a_burst_half_full;
-
+wire path_a_data_rd, path_a_burst_rd;
 
 fifo #(
     .BITS_DEPTH($clog2(64)),
@@ -95,7 +114,7 @@ fifo #(
     .i_rst(i_rst),
     .din({packer_dout_dwen, packer_dout}),
     .wr_en(packer_valid && dma_request_a_tag == packer_tag),
-    .rd_en(0),
+    .rd_en(path_a_data_rd),
     .dout({path_a_data_dout_dwen, path_a_data_dout}),
     .full(path_a_data_full),
     .empty(path_a_data_empty),
@@ -105,13 +124,13 @@ fifo #(
 
 fifo #(
    .BITS_DEPTH($clog2(64)),
-   .BITS_WIDTH(7+32)
+   .BITS_WIDTH(40)
 ) path_a_burst_fifo(
     .i_clk(i_clk),
     .i_rst(i_rst),
     .din({dma_request_a_device_addr, dma_request_a_burst_ctr}),
     .wr_en(dma_request_a_add_burst),
-    .rd_en(0),
+    .rd_en(path_a_burst_rd),
     .dout({path_a_burst_addr, path_a_burst_ctr}),
     .full(path_a_burst_full),
     .empty(path_a_burst_empty),
@@ -125,7 +144,7 @@ reg         set_path_b;
 reg         dma_request_b_hot;
 reg [7:0]   dma_request_b_tag;
 reg [31:0]  dma_request_b_device_addr, dma_request_b_device_addr_next_burst_start;
-reg [31:0]  dma_request_b_size;
+reg [9:0]   dma_request_b_size;
 reg [7:0]   dma_request_b_burst_ctr;
 reg dma_request_b_add_burst;
 
@@ -137,7 +156,7 @@ wire [7:0] path_b_burst_ctr;
 wire path_b_data_empty, path_b_burst_empty;
 wire path_b_data_full, path_b_burst_full;
 wire path_b_data_half_full, path_b_burst_half_full;
-
+wire path_b_data_rd, path_b_burst_rd;
 
 fifo #(
     .BITS_DEPTH($clog2(64)),
@@ -147,7 +166,7 @@ fifo #(
     .i_rst(i_rst),
     .din({packer_dout_dwen, packer_dout}),
     .wr_en(packer_valid && dma_request_b_tag == packer_tag),
-    .rd_en(0),
+    .rd_en(path_b_data_rd),
     .dout({path_b_data_dout_dwen, path_b_data_dout}),
     .full(path_b_data_full),
     .empty(path_b_data_empty),
@@ -157,19 +176,61 @@ fifo #(
 
 fifo #(
    .BITS_DEPTH($clog2(64)),
-   .BITS_WIDTH(7+32)
+   .BITS_WIDTH(40)
 ) path_b_burst_fifo(
     .i_clk(i_clk),
     .i_rst(i_rst),
     .din({dma_request_b_device_addr, dma_request_b_burst_ctr}),
     .wr_en(dma_request_b_add_burst),
-    .rd_en(0),
+    .rd_en(path_b_burst_rd),
     .dout({path_b_burst_addr, path_b_burst_ctr}),
     .full(path_b_burst_full),
     .empty(path_b_burst_empty),
     .half_full(path_b_burst_half_full)
 );
 
+// Test
+
+reg [10:0] slow_awvalid;
+wire awvalid;
+always @(posedge i_clk) begin
+    slow_awvalid[0] <= awvalid;
+    slow_awvalid[10:1] <= slow_awvalid[9:0];
+end
+
+// Test
+
+drc_axi_pusher #(
+    .p_paths(2)
+) pusher (
+    .i_clk(i_clk),
+    .i_rst(i_rst),
+
+    .paths_burst_rd({path_b_burst_rd, path_a_burst_rd}),
+    .paths_data_rd({path_b_data_rd, path_a_data_rd}),
+    .paths_data_in({path_b_data_dout, path_a_data_dout}),
+    .paths_burst_empty({path_b_burst_empty, path_a_burst_empty}),
+    .paths_burst_in({path_b_burst_addr, path_b_burst_ctr, path_a_burst_addr, path_a_burst_ctr}),
+
+    .awaddr(awaddr),
+    .awlen(awlen),
+    .awsize(awsize),
+    .awburst(awburst),
+    .awcache(awcache),
+    .awproto(awproto),
+    .awvalid(awvalid),
+    .awready(awready),
+    
+    .wdata(wdata),
+    .wstrb(wstrb),
+    .wlast(wlast),
+    .wvalid(wvalid),
+    .wready(wready),
+
+    .bresp(bresp),
+    .bvalid(bvalid),
+    .bready(bready)
+);
 
 
 always @(*) begin
@@ -213,7 +274,8 @@ always @(*) begin
                 dma_read_valid_next = 1;
                 set_path_a = 1;
                 state_next = lp_state_request_done;
-            end 
+            end
+             
             else if (splitter_dma_pending && !path_b_burst_half_full && !path_b_data_half_full && !dma_request_b_hot) begin
                 dma_read_valid_next = 1;
                 set_path_b = 1;
