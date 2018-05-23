@@ -6,7 +6,7 @@ module drc_axi_pusher#(
 
 		output reg [p_paths-1:0] paths_burst_rd,
 		output reg [p_paths-1:0] paths_data_rd,
-		input wire [p_paths*128-1:0] paths_data_in,
+		input wire [p_paths*132-1:0] paths_data_in,
 		input wire [p_paths-1:0] paths_burst_empty,
 		input wire [p_paths*40-1:0] paths_burst_in,
 
@@ -142,7 +142,7 @@ always @(*) begin
 		if(path_active[j]) begin
 			awaddr = paths_burst_in[j*40+8 +:32];
 			awlen = paths_burst_in[j*40 +:7] - 1'b1;
-			wdata = paths_data_in[j*128 +:128];
+			wdata = paths_data_in[j*132 +:128];
 		end
 	end
 end

@@ -189,17 +189,6 @@ fifo #(
     .half_full(path_b_burst_half_full)
 );
 
-// Test
-
-reg [10:0] slow_awvalid;
-wire awvalid;
-always @(posedge i_clk) begin
-    slow_awvalid[0] <= awvalid;
-    slow_awvalid[10:1] <= slow_awvalid[9:0];
-end
-
-// Test
-
 drc_axi_pusher #(
     .p_paths(2)
 ) pusher (
