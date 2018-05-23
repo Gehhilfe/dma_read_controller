@@ -32,7 +32,7 @@ module drc_axi_pusher#(
 
 
 // 128bits in each data transfer
-assign awsize = 3'b111;
+assign awsize = 3'b100;
 
 // INCR Burst
 assign awburst = 2'b01;
@@ -40,7 +40,7 @@ assign awburst = 2'b01;
 // Fixed xilinx
 assign awcache = 4'b0011;
 assign awproto = 3'b000;
-assign wstrb = 16'hFF;
+assign wstrb = 16'hFFFF;
 
 localparam 
 	lp_state_bits = 32,
@@ -49,12 +49,12 @@ localparam
 	lp_state_burst_data = 2,
 	lp_state_resp = 3;
 
-reg [lp_state_bits-1:0] state, state_next;
+(* dont_touch = "true" *) reg [lp_state_bits-1:0] state, state_next;
 
 reg	[7:0] burst_ctr;
 assign wlast = burst_ctr == 0;
 
-reg [p_paths-1:0] path_sel;
+(* dont_touch = "true" *) reg [p_paths-1:0] path_sel;
 
 integer j;
 generate
@@ -75,7 +75,7 @@ generate
 	end
 endgenerate
 
-reg [p_paths-1:0] path_active;
+(* dont_touch = "true" *) reg [p_paths-1:0] path_active;
 reg [p_paths-1:0] path_active_next;
 reg awvalid_next, wvalid_next, bready_next;
 
@@ -126,6 +126,7 @@ always @(*) begin
 			bready_next = 1;
 			if(bvalid && bready) begin
 				bready_next = 0;
+				path_active_next = 0;
 				state_next = lp_state_idle;
 			end
 		end
@@ -135,13 +136,16 @@ end
 
 //address and burst len mux
 always @(*) begin
-	awaddr = awaddr;
-	awlen = awlen;
-	wdata = wdata;
+	//awaddr = awaddr;
+	//awlen = awlen;
+	//wdata = wdata;
+	awaddr = 0;
+	awlen = 0;
+	wdata = 0;
 	for (j=0; j<p_paths; j=j+1) begin
 		if(path_active[j]) begin
 			awaddr = paths_burst_in[j*40+8 +:32];
-			awlen = paths_burst_in[j*40 +:7] - 1'b1;
+			awlen = paths_burst_in[j*40 +:8] - 1'b1;
 			wdata = paths_data_in[j*132 +:128];
 		end
 	end
@@ -151,8 +155,6 @@ always @(posedge i_clk) begin
 	if (i_rst) begin
 		state <= lp_state_idle;
 		path_active <= 0;
-		paths_burst_rd <= 0;
-		paths_data_rd <= 0;
 
 		awvalid <= 0;
 		wvalid <= 0;
