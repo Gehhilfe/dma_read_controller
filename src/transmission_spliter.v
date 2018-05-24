@@ -16,7 +16,7 @@ module transmission_spliter(
     
     output wire [31:0] dma_address_host,
     output wire [31:0] dma_address_device,
-    output reg [9:0] dma_size,
+    output reg [11:0] dma_size,
     output wire dma_dir_write
     
     );

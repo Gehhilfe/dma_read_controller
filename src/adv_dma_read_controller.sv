@@ -56,10 +56,10 @@ wire [31:0] req_size;
 
 wire [31:0]  splitter_dma_address_host;
 wire [31:0]  splitter_dma_address_device;
-wire [9:0]  splitter_dma_size;
+wire [11:0]  splitter_dma_size;
 
 assign dma_read_addr = splitter_dma_address_host;
-assign dma_read_len = splitter_dma_size;
+assign dma_read_len = splitter_dma_size[11:2];
 
 transmission_spliter splitter(
     .i_clk(i_clk),
@@ -87,11 +87,11 @@ reg [p_paths-1:0] set_paths;
 wire [p_paths-1:0] paths_hot;
 wire [p_paths-1:0] paths_can_start;
 
-wire [132-1:0][p_paths-1:0] paths_data_out;
+wire [p_paths-1:0][132-1:0] paths_data_out;
 wire [p_paths-1:0] paths_data_rd;
 wire [p_paths-1:0] paths_data_half_full;
 
-wire [40-1:0][p_paths-1:0] paths_burst_out;
+wire [p_paths-1:0][40-1:0] paths_burst_out;
 wire [p_paths-1:0] paths_burst_rd;
 wire [p_paths-1:0] paths_burst_empty;
 
@@ -105,7 +105,7 @@ generate
         assign paths_hot[i] = dma_request_hot;
         reg [7:0]  dma_request_tag;
         reg [31:0] dma_request_device_addr, dma_request_device_addr_next_burst_start;
-        reg [9:0]  dma_request_size;
+        reg [11:0] dma_request_size;
         reg [7:0]  dma_request_burst_ctr;
         reg        dma_request_add_burst;
 
@@ -132,13 +132,23 @@ generate
         ) path_burst_fifo(
             .i_clk(i_clk),
             .i_rst(i_rst),
-            .din({dma_request_deviceddr, dma_request_burst_ctr}),
-            .wr_en(dma_requestdd_burst),
+            .din({dma_request_device_addr, dma_request_burst_ctr}),
+            .wr_en(dma_request_add_burst),
             .rd_en(paths_burst_rd[i]),
             .dout(paths_burst_out[i]),
             .half_full(path_burst_half_full),
             .empty(paths_burst_empty[i])
         );
+
+        always @(*) begin
+            dma_request_add_burst = 0;
+            if(dma_request_hot) begin
+                if (dma_request_size != 11'b0 && packer_dout_dwen[3] == 0 && packer_valid && dma_request_tag == packer_tag)
+                    dma_request_add_burst = 1;
+                if (dma_request_size == 11'b0)
+                    dma_request_add_burst = 1;
+            end
+        end
 
         always @(posedge i_clk) begin
             if (i_rst) begin
@@ -156,8 +166,8 @@ generate
                 else begin
                     if(dma_request_size == 0)
                         dma_request_hot <= 0;
-                  if(dma_request_add_burst)
-                    dma_request_device_addr <= dma_request_device_addr_next_burst_start;
+                    if(dma_request_add_burst)
+                        dma_request_device_addr <= dma_request_device_addr_next_burst_start;
                 end
 
 
@@ -184,9 +194,10 @@ generate
             end // end else
         end // always @(posedge i_clk)
     end
+endgenerate
 
-
-	for (i=0; i<p_paths; i=i+1) begin
+generate
+    for (i=0; i<p_paths; i=i+1) begin
         reg all_null;
         always @(*) begin
             all_null = paths_can_start[i];
@@ -203,7 +214,7 @@ generate
 endgenerate
 
 
-drc_axi_pusher #(
+adv_drc_axi_pusher #(
     .p_paths(p_paths)
 ) pusher (
     .i_clk(i_clk),
@@ -211,7 +222,7 @@ drc_axi_pusher #(
 
     .paths_burst_rd(paths_burst_rd),
     .paths_data_rd(paths_data_rd),
-    .paths_data_in({>>{paths_data_out}}),
+    .paths_data_in(paths_data_out),
     .paths_burst_empty(paths_burst_empty),
     .paths_burst_in(paths_burst_out),
 

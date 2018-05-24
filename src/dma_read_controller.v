@@ -45,7 +45,7 @@ module dma_read_controller(
 );
 
 reg splitter_dma_done;
-(* dont_touch = "true" *) wire splitter_dma_pending;
+wire splitter_dma_pending;
 
 wire [31:0] req_address_host;
 wire [31:0] req_address_device;
@@ -53,10 +53,10 @@ wire [31:0] req_size;
 
 wire [31:0]  splitter_dma_address_host;
 wire [31:0]  splitter_dma_address_device;
-wire [9:0]  splitter_dma_size;
+wire [11:0]  splitter_dma_size;
 
 assign dma_read_addr = splitter_dma_address_host;
-assign dma_read_len = splitter_dma_size;
+assign dma_read_len = splitter_dma_size[11:2];
 
 transmission_spliter splitter(
     .i_clk(i_clk),
@@ -87,13 +87,13 @@ reg [lp_state_bits-1:0] state, state_next;
 
 reg dma_read_valid_next;
 
-(* dont_touch = "true" *) reg         set_path_a;
-(* dont_touch = "true" *) reg         dma_request_a_hot;
-(* dont_touch = "true" *) reg [7:0]   dma_request_a_tag;
-(* dont_touch = "true" *) reg [31:0]  dma_request_a_device_addr, dma_request_a_device_addr_next_burst_start;
-(* dont_touch = "true" *) reg [9:0]  dma_request_a_size;
-(* dont_touch = "true" *) reg [7:0]  dma_request_a_burst_ctr;
-(* dont_touch = "true" *) reg dma_request_a_add_burst;
+reg         set_path_a;
+reg         dma_request_a_hot;
+reg [7:0]   dma_request_a_tag;
+reg [31:0]  dma_request_a_device_addr, dma_request_a_device_addr_next_burst_start;
+reg [11:0]  dma_request_a_size;
+reg [7:0]  dma_request_a_burst_ctr;
+reg dma_request_a_add_burst;
 
 
 
@@ -122,7 +122,7 @@ fifo #(
     .elements (path_a_elements)
 );
 
-(* dont_touch = "true" *) fifo #(
+fifo #(
    .BITS_DEPTH($clog2(64)),
    .BITS_WIDTH(40)
 ) path_a_burst_fifo(
@@ -144,7 +144,7 @@ reg         set_path_b;
 reg         dma_request_b_hot;
 reg [7:0]   dma_request_b_tag;
 reg [31:0]  dma_request_b_device_addr, dma_request_b_device_addr_next_burst_start;
-reg [9:0]   dma_request_b_size;
+reg [11:0]   dma_request_b_size;
 reg [7:0]   dma_request_b_burst_ctr;
 reg dma_request_b_add_burst;
 
@@ -190,7 +190,7 @@ fifo #(
 );
 
 
-(* dont_touch = "true" *) drc_axi_pusher #(
+drc_axi_pusher #(
     .p_paths(2)
 ) pusher (
     .i_clk(i_clk),

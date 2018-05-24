@@ -49,12 +49,12 @@ localparam
 	lp_state_burst_data = 2,
 	lp_state_resp = 3;
 
-(* dont_touch = "true" *) reg [lp_state_bits-1:0] state, state_next;
+reg [lp_state_bits-1:0] state, state_next;
 
 reg	[7:0] burst_ctr;
 assign wlast = burst_ctr == 0;
 
-(* dont_touch = "true" *) reg [p_paths-1:0] path_sel;
+reg [p_paths-1:0] path_sel;
 
 integer j;
 generate
@@ -75,7 +75,7 @@ generate
 	end
 endgenerate
 
-(* dont_touch = "true" *) reg [p_paths-1:0] path_active;
+reg [p_paths-1:0] path_active;
 reg [p_paths-1:0] path_active_next;
 reg awvalid_next, wvalid_next, bready_next;
 

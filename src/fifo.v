@@ -57,12 +57,12 @@ always @(posedge i_clk) begin
         write_ptr <= 0;
     end else begin
         if (wr_en) begin 
-            mem[write_ptr] <= din;
+            mem[write_ptr[BITS_DEPTH-1:0]] <= din;
             write_ptr <= write_ptr + 1'b1;
         end
         
         if (rd_en) begin 
-            dout <= mem[read_ptr];
+            dout <= mem[read_ptr[BITS_DEPTH-1:0]];
             read_ptr <= read_ptr + 1'b1;
         end
     end
