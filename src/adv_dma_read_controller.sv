@@ -92,7 +92,6 @@ wire [p_paths-1:0] paths_can_start;
 
 wire [p_paths-1:0][132-1:0] paths_data_out;
 wire [p_paths-1:0] paths_data_rd;
-wire [p_paths-1:0] paths_data_half_full;
 
 wire [p_paths-1:0][40-1:0] paths_burst_out;
 wire [p_paths-1:0] paths_burst_rd;
@@ -113,10 +112,11 @@ generate
         reg        dma_request_add_burst;
 
         wire path_burst_half_full;
-        assign paths_can_start[i] = !paths_data_half_full[i] && !path_burst_half_full && !dma_request_hot;
+        wire paths_data_half_full;
+        assign paths_can_start[i] = !paths_data_half_full && !path_burst_half_full && !dma_request_hot;
         
         fifo #(
-            .BITS_DEPTH($clog2(64)),
+            .BITS_DEPTH($clog2(512)),
             .BITS_WIDTH(132)
         ) path_data_fifo(
             .i_clk(i_clk),
@@ -125,12 +125,11 @@ generate
             .wr_en(packer_valid && dma_request_tag == packer_tag),
             .rd_en(paths_data_rd[i]),
             .dout(paths_data_out[i]),
-            .half_full(paths_data_half_full[i]),
-            .elements (path_elements)
+            .half_full(paths_data_half_full)
         );
 
         fifo #(
-           .BITS_DEPTH($clog2(64)),
+           .BITS_DEPTH($clog2(512/8)),
            .BITS_WIDTH(40)
         ) path_burst_fifo(
             .i_clk(i_clk),
