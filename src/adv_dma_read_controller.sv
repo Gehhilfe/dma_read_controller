@@ -25,6 +25,9 @@ module adv_dma_read_controller #(
     input wire              dma_read_done,
     input wire [7:0]        current_tag,
 
+    // Interrupt
+    output reg              int_valid,
+    input wire              int_done,
 
     output wire  [31:0]     awaddr,
     output wire  [7:0]      awlen,
@@ -249,25 +252,40 @@ adv_drc_axi_pusher #(
 localparam
     lp_state_bits = 32,
     lp_state_idle = 0,
-    lp_state_request_done = 1;
+    lp_state_request_done = 1,
+    lp_state_interrupt = 2;
 
 reg [lp_state_bits-1:0] state, state_next;
 reg dma_read_valid_next;
+reg int_valid_next;
+reg splitter_dma_pending_d;
 
 always @(*) begin
     state_next = state;
     set_paths = 0;
     dma_read_valid_next = 0;
     splitter_dma_done = 0;
-    
+    int_valid_next = 0;
     case (state)
         lp_state_idle: begin
-            if(splitter_dma_pending && |path_sel) begin
+            if(splitter_dma_pending_d && !splitter_dma_pending) begin
+                int_valid_next = 1;
+                state_next = lp_state_interrupt;
+            end // if(splitter_dma_pending_d && !splitter_dma_pending)
+            else if(splitter_dma_pending && |path_sel) begin
                 dma_read_valid_next = 1;
                 set_paths = path_sel;
                 state_next = lp_state_request_done;
             end
-        end
+        end // lp_state_idle
+
+        lp_state_interrupt: begin
+            int_valid_next = 1;
+            if (int_done) begin
+                int_valid_next = 0;
+                state_next = lp_state_idle;
+            end // if (int_done)
+        end // lp_state_interrupt
 
         lp_state_request_done: begin
             dma_read_valid_next = 1;
@@ -276,7 +294,7 @@ always @(*) begin
                 splitter_dma_done = 1;
                 state_next = lp_state_idle;
             end
-        end
+        end // lp_state_request_done
     endcase
 end
 
@@ -284,10 +302,14 @@ always @(posedge i_clk) begin
     if (i_rst) begin
         state <= lp_state_idle;
         dma_read_valid <= 0;
+        splitter_dma_pending_d <= 0;
+        int_valid <= 0;
     end // if (i_rst)
     else begin
         state <= state_next;
         dma_read_valid <= dma_read_valid_next;
+        splitter_dma_pending_d <= splitter_dma_pending;
+        int_valid <= int_valid_next;
     end // else
 end // always @(posedge i_clk)
 
