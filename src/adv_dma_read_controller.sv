@@ -28,6 +28,7 @@ module adv_dma_read_controller #(
     // Interrupt
     output reg              int_valid,
     input wire              int_done,
+    output wire             all_empty,
 
     output wire  [31:0]     awaddr,
     output wire  [7:0]      awlen,
@@ -52,10 +53,6 @@ module adv_dma_read_controller #(
 
 reg splitter_dma_done;
 wire splitter_dma_pending;
-
-wire [31:0] req_address_host;
-wire [31:0] req_address_device;
-wire [31:0] req_size;
 
 wire [31:0]  splitter_dma_address_host;
 wire [31:0]  splitter_dma_address_device;
@@ -92,10 +89,13 @@ wire [p_paths-1:0] paths_can_start;
 
 wire [p_paths-1:0][132-1:0] paths_data_out;
 wire [p_paths-1:0] paths_data_rd;
+wire [p_paths-1:0] paths_data_empty;
 
 wire [p_paths-1:0][40-1:0] paths_burst_out;
 wire [p_paths-1:0] paths_burst_rd;
 wire [p_paths-1:0] paths_burst_empty;
+
+assign all_empty = &paths_data_empty && &paths_burst_empty;
 
 generate
     genvar i;
@@ -116,7 +116,7 @@ generate
         assign paths_can_start[i] = !paths_data_half_full && !path_burst_half_full && !dma_request_hot;
         
         fifo #(
-            .BITS_DEPTH($clog2(512)),
+            .BITS_DEPTH($clog2(64)),
             .BITS_WIDTH(132)
         ) path_data_fifo(
             .i_clk(i_clk),
@@ -125,11 +125,12 @@ generate
             .wr_en(packer_valid && dma_request_tag == packer_tag),
             .rd_en(paths_data_rd[i]),
             .dout(paths_data_out[i]),
-            .half_full(paths_data_half_full)
+            .half_full(paths_data_half_full),
+            .empty(paths_data_empty[i])
         );
 
         fifo #(
-           .BITS_DEPTH($clog2(512/8)),
+           .BITS_DEPTH($clog2(16)),
            .BITS_WIDTH(40)
         ) path_burst_fifo(
             .i_clk(i_clk),
@@ -268,7 +269,6 @@ always @(*) begin
     case (state)
         lp_state_idle: begin
             if(splitter_dma_pending_d && !splitter_dma_pending) begin
-                int_valid_next = 1;
                 state_next = lp_state_interrupt;
             end // if(splitter_dma_pending_d && !splitter_dma_pending)
             else if(splitter_dma_pending && |path_sel) begin
@@ -279,8 +279,8 @@ always @(*) begin
         end // lp_state_idle
 
         lp_state_interrupt: begin
-            int_valid_next = 1;
-            if (int_done) begin
+            if(!splitter_dma_pending) int_valid_next = 1;
+            if (int_done && int_valid) begin
                 int_valid_next = 0;
                 state_next = lp_state_idle;
             end // if (int_done)

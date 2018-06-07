@@ -159,6 +159,9 @@ always @(posedge i_clk) begin
 		awvalid <= 0;
 		wvalid <= 0;
 		bready <= 0;
+
+		burst_ctr <= 0;
+		
 	end else begin
 		state <= state_next;
 

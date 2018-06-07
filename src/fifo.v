@@ -37,16 +37,15 @@ module fifo #(
     output wire full,
     output wire empty,
 
-    output wire [BITS_WIDTH-1:0] elements,
     output wire half_full
     );
 
 reg [BITS_DEPTH:0] read_ptr, write_ptr;
+reg [BITS_DEPTH-1:0] counter;
 
 reg [BITS_WIDTH-1:0] mem [0:2**BITS_DEPTH];
 
-assign elements = write_ptr[BITS_DEPTH-1:0] - read_ptr[BITS_DEPTH-1:0];
-assign half_full = elements[BITS_DEPTH-1];
+assign half_full = counter[BITS_DEPTH-1];
 
 assign empty = read_ptr == write_ptr;
 assign full = read_ptr[BITS_DEPTH] != write_ptr[BITS_DEPTH] && read_ptr[BITS_DEPTH-1:0] == write_ptr[BITS_DEPTH-1:0];
@@ -55,6 +54,7 @@ always @(posedge i_clk) begin
     if (i_rst) begin
         read_ptr <= 0;
         write_ptr <= 0;
+        counter <= 0;
     end else begin
         if (wr_en) begin 
             mem[write_ptr[BITS_DEPTH-1:0]] <= din;
@@ -64,6 +64,13 @@ always @(posedge i_clk) begin
         if (rd_en) begin 
             dout <= mem[read_ptr[BITS_DEPTH-1:0]];
             read_ptr <= read_ptr + 1'b1;
+        end
+
+        if(wr_en && !rd_en) begin
+            counter <= counter + 1;
+        end else 
+        if(rd_en && !wr_en) begin
+            counter <= counter - 1;
         end
     end
 end    
