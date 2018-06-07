@@ -95,8 +95,6 @@ wire [p_paths-1:0][40-1:0] paths_burst_out;
 wire [p_paths-1:0] paths_burst_rd;
 wire [p_paths-1:0] paths_burst_empty;
 
-assign all_empty = &paths_data_empty && &paths_burst_empty;
-
 generate
     genvar i;
     for (i=0; i<p_paths; i=i+1) begin
@@ -259,6 +257,8 @@ reg [lp_state_bits-1:0] state, state_next;
 reg dma_read_valid_next;
 reg int_valid_next;
 reg splitter_dma_pending_d;
+
+assign all_empty = &paths_data_empty && &paths_burst_empty;
 
 always @(*) begin
     state_next = state;

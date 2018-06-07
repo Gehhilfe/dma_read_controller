@@ -178,6 +178,8 @@ module gather_read_dma#(
 
 	reg [lp_state_bits-1:0] r_state, state_next;
 
+    reg r_was_not_all_empty;
+
 	reg set_dma_read_block;
 	reg reset_dma;
 
@@ -261,7 +263,7 @@ module gather_read_dma#(
 			end
 
 			lp_state_int: begin
-				if(all_empty) set_int = 1;
+				if(all_empty && r_was_not_all_empty) set_int = 1;
 				if(int_done) begin
 					state_next = lp_state_idle;
 				end
@@ -278,6 +280,7 @@ module gather_read_dma#(
 			r_block_hot <= 0;
 
 			int_valid <= 0;
+            r_was_not_all_empty <= 0;
 		end
 		else begin
 			r_state <= state_next;
@@ -302,6 +305,9 @@ module gather_read_dma#(
 			if(int_done) int_valid <= 0;
 
 			if(decr_pairs) r_sub_dma_pairs <= r_sub_dma_pairs - 1;
+
+            if(!all_empty) r_was_not_all_empty <= 1;
+            else if(set_int) r_was_not_all_empty <= 0;
 
 			if(set_path_a) begin
 				r_dma_read_host_address <= path_a_address;
