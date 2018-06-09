@@ -120,7 +120,7 @@ generate
             .i_clk(i_clk),
             .i_rst(i_rst),
             .din({packer_dout_dwen, packer_dout}),
-            .wr_en(packer_valid && dma_request_tag == packer_tag),
+            .wr_en(packer_valid && dma_request_tag == packer_tag && dma_request_hot),
             .rd_en(paths_data_rd[i]),
             .dout(paths_data_out[i]),
             .half_full(paths_data_half_full),
@@ -155,6 +155,7 @@ generate
             if (i_rst) begin
                 dma_request_size <= 0;
                 dma_request_hot <= 0; 
+                dma_request_tag <= 0;
             end else begin
                 if (dma_set_path) begin
                     dma_request_tag <= current_tag;

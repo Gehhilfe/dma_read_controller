@@ -47,7 +47,7 @@ reg [BITS_WIDTH-1:0] mem [0:2**BITS_DEPTH];
 
 assign half_full = counter[BITS_DEPTH-1];
 
-assign empty = read_ptr == write_ptr;
+assign empty = counter == 0;
 assign full = read_ptr[BITS_DEPTH] != write_ptr[BITS_DEPTH] && read_ptr[BITS_DEPTH-1:0] == write_ptr[BITS_DEPTH-1:0];
     
 always @(posedge i_clk) begin

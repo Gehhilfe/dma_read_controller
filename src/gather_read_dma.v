@@ -49,6 +49,7 @@ module gather_read_dma#(
     output wire             bready
 	);
 
+
 	wire dma_read_int_valid;
 	wire dma_read_int_done = 1;
 
@@ -59,7 +60,7 @@ module gather_read_dma#(
 	reg [31:0] r_dma_read_host_address;
 	reg [31:0] r_dma_read_device_address;
 	reg [31:0] r_dma_read_length;
-	reg [31:0] r_sub_dma_pairs;
+	reg [7:0]  r_sub_dma_pairs;
 	reg        r_dma_read_start;
 
 	reg [31:0] r_dma_read_addr;
@@ -153,16 +154,19 @@ module gather_read_dma#(
 	wire [31:0] path_a_length = {block_fifo_dout_b[7:0], block_fifo_dout_b[15:8], block_fifo_dout_b[23:16], block_fifo_dout_b[31:24]};
 	wire [31:0] path_b_length = {block_fifo_dout_d[7:0], block_fifo_dout_d[15:8], block_fifo_dout_d[23:16], block_fifo_dout_d[31:24]};
 
+	wire path_a_non_zero_length;
+	wire path_b_non_zero_length;
+
 	fifo #(
         .BITS_DEPTH($clog2(128/4)),
-        .BITS_WIDTH(128)
+        .BITS_WIDTH(130)
     ) block_fifo (
         .i_clk(i_clk),
         .i_rst(i_rst),
-        .din(packer_dout),
+        .din({|packer_dout[127:96], |packer_dout[63:32], packer_dout}),
         .wr_en(packer_valid && r_block_tag == packer_tag && r_block_hot),
         .rd_en(read_block),
-        .dout(block_fifo_dout),
+        .dout({path_b_non_zero_length, path_a_non_zero_length, block_fifo_dout}),
         .empty(block_fifo_empty),
         .full(block_fifo_full)
     );
@@ -226,11 +230,11 @@ module gather_read_dma#(
 			end
 
 			lp_state_work_wait_q: begin
-				if(path_a_length != 0) begin
+				if(path_a_non_zero_length) begin
 					set_path_a = 1;
 					state_next = lp_state_work_a;
 				end else begin
-					if(path_b_length != 0) begin
+					if(path_b_non_zero_length) begin
 						set_path_b = 1;
 						state_next = lp_state_work_b;
 					end else begin
@@ -244,7 +248,7 @@ module gather_read_dma#(
 				if(dma_read_int_valid) begin
 					//sub dma is done
 					incr_address = 1;
-					if(path_b_length != 0) begin
+					if(path_b_non_zero_length) begin
 						set_path_b = 1;
 						state_next = lp_state_work_b;
 					end else begin
@@ -313,7 +317,9 @@ module gather_read_dma#(
 				r_dma_read_host_address <= path_a_address;
 				r_dma_read_length <= path_a_length;
 				r_dma_read_start <= 1;
-			end else if(set_path_b) begin
+			end 
+
+			if(set_path_b) begin
 				r_dma_read_host_address <= path_b_address;
 				r_dma_read_length <= path_b_length;
 				r_dma_read_start <= 1;
