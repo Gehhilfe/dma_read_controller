@@ -99,7 +99,7 @@ generate
     genvar i;
     for (i=0; i<p_paths; i=i+1) begin
 
-        wire        dma_set_path = set_paths[i];
+        wire       dma_set_path = set_paths[i];
 
         reg        dma_request_hot;
         assign paths_hot[i] = dma_request_hot;
@@ -173,7 +173,7 @@ generate
                 end
 
 
-                if(packer_valid) begin
+                if(packer_valid && dma_request_hot) begin
                     if (packer_tag == dma_request_tag) begin
                         casex (packer_dout_dwen)
                             4'b0001: dma_request_size <= dma_request_size - 4;
