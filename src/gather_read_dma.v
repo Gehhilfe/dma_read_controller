@@ -158,7 +158,7 @@ module gather_read_dma#(
 	wire path_b_non_zero_length;
 
 	fifo #(
-        .BITS_DEPTH($clog2(128/4)),
+        .BITS_DEPTH($clog2(256/4)),
         .BITS_WIDTH(130)
     ) block_fifo (
         .i_clk(i_clk),
