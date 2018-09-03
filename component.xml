@@ -79,10 +79,26 @@
         </spirit:portMap>
         <spirit:portMap>
           <spirit:logicalPort>
+            <spirit:name>dma_read_control</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>dma_read_control</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
             <spirit:name>dma_read_start</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
             <spirit:name>dma_read_start</spirit:name>
+          </spirit:physicalPort>
+        </spirit:portMap>
+        <spirit:portMap>
+          <spirit:logicalPort>
+            <spirit:name>dma_read_status</spirit:name>
+          </spirit:logicalPort>
+          <spirit:physicalPort>
+            <spirit:name>dma_read_status</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
       </spirit:portMaps>
@@ -343,7 +359,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>46504acc</spirit:value>
+            <spirit:value>441d71b6</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -359,7 +375,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>46504acc</spirit:value>
+            <spirit:value>441d71b6</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -475,6 +491,40 @@
         <spirit:name>dma_read_length</spirit:name>
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long">31</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>dma_read_control</spirit:name>
+        <spirit:wire>
+          <spirit:direction>in</spirit:direction>
+          <spirit:vector>
+            <spirit:left spirit:format="long">31</spirit:left>
+            <spirit:right spirit:format="long">0</spirit:right>
+          </spirit:vector>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>wire</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
+        <spirit:name>dma_read_status</spirit:name>
+        <spirit:wire>
+          <spirit:direction>out</spirit:direction>
           <spirit:vector>
             <spirit:left spirit:format="long">31</spirit:left>
             <spirit:right spirit:format="long">0</spirit:right>
@@ -1068,11 +1118,11 @@
       </xilinx:taxonomies>
       <xilinx:displayName>dma_read_controller_v1_0</xilinx:displayName>
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
-      <xilinx:coreRevision>20</xilinx:coreRevision>
+      <xilinx:coreRevision>22</xilinx:coreRevision>
       <xilinx:upgrades>
         <xilinx:canUpgradeFrom>user.org:user:dma_read_controller:1.0</xilinx:canUpgradeFrom>
       </xilinx:upgrades>
-      <xilinx:coreCreationDateTime>2018-06-07T14:17:57Z</xilinx:coreCreationDateTime>
+      <xilinx:coreCreationDateTime>2018-09-03T09:35:24Z</xilinx:coreCreationDateTime>
       <xilinx:tags>
         <xilinx:tag xilinx:name="user.org:user:dma_read_controller:1.0_ARCHIVE_LOCATION">/home/timb/git/cgra_ip/dma_read_controller</xilinx:tag>
         <xilinx:tag xilinx:name="rs.tu-darmstadt.de:user:dma_read_controller:1.0_ARCHIVE_LOCATION">/home/timb/Schreibtisch/git/cgra_ip/dma_read_controller</xilinx:tag>
@@ -1080,10 +1130,10 @@
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2017.2</xilinx:xilinxVersion>
-      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="16c17ded"/>
+      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="70f9f593"/>
       <xilinx:checksum xilinx:scope="addressSpaces" xilinx:value="1d252eb8"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="3eb4f9d6"/>
-      <xilinx:checksum xilinx:scope="ports" xilinx:value="1b583249"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="1b229014"/>
+      <xilinx:checksum xilinx:scope="ports" xilinx:value="cf7596d3"/>
       <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="4cb2627a"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="393163ad"/>
     </xilinx:packagingInfo>
