@@ -6,6 +6,8 @@ module gather_read_dma#(
 
     input wire [15:0]       pcie_dcommand,
 
+    input wire [31:0]       dma_read_control,
+    output reg [31:0]       dma_read_status,
     input wire [31:0]       dma_read_host_address,
     input wire [31:0]       dma_read_device_address,
     input wire [31:0]       dma_read_length,
@@ -193,6 +195,11 @@ module gather_read_dma#(
 
 	reg set_int;
 
+
+    //dma read controll decoding
+
+    wire control_interrupt_en = !dma_read_control[0];
+
 	always @(*) begin
 		state_next = r_state;
 		set_dma_read_block = 0;
@@ -204,8 +211,11 @@ module gather_read_dma#(
 		decr_pairs = 0;
 		set_int = 0;
 
+        dma_read_status = 0;
+
 		case(r_state)
 			lp_state_idle: begin
+                dma_read_status = 1;
 				if(dma_read_start) begin
 					// Read block with dma descriptions
 					set_dma_read_block = 1;
@@ -267,10 +277,15 @@ module gather_read_dma#(
 			end
 
 			lp_state_int: begin
-				if(all_empty && r_was_not_all_empty) set_int = 1;
-				if(int_done) begin
-					state_next = lp_state_idle;
-				end
+                if(control_interrupt_en) begin
+                    if(all_empty && r_was_not_all_empty) set_int = 1;
+                    if(int_done) begin
+                        state_next = lp_state_idle;
+                    end
+                end // control_interrupt_en
+                else begin
+                    if(all_empty && r_was_not_all_empty) state_next = lp_state_idle;
+                end // !control_interrupt_en
 			end
 		endcase
 	end
